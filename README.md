@@ -1,4 +1,4 @@
-# quantile-neural-networks
+# Quantile neural networks
 This repo describes python code and input data files for "Forecasting stock return distributions around the globe with quantile neural networks".
 
 ReadMe.xlsx provides more details on:		
@@ -6,7 +6,9 @@ ReadMe.xlsx provides more details on:
 - Code description: describes the python code and how to run it
 - Code to figure mapping: provides mapping of figures in the paper to code used to generate them
 
-# how to run
+Minimum working example is provided in ChampionModel.ipynb which produces forecasts for distributions of stock returns using WRDS data in the US.
+
+# How to run
 
 The code was run on WSL 2 using Ubuntu 22.04.1 LTS and python version 3.12.8. Dependencies are in requirements.txt file.
 
@@ -20,9 +22,9 @@ The environement can also be created using the following commands:
     pip install arch scores
     conda install pytorch torchvision torchaudio pytorch-cuda=12.1 -c pytorch -c nvidia -y
 
-# run time
+# Run time
 
-Pure run time for all the scripts is more than 2 months, most of which is for robustness tests.
+Pure run time for all the scripts is more than 2 months, most of which is taken by robustness tests and hyperparameter search.
 - data preparation ~ 2 weeks
 - hyperparameter tuning ~ 3weeks
 - estimation all NN specifications ~2 weeks
