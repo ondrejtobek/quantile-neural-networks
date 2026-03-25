@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+
+# Virtual environment
+.venv/
+
+# Generated data (reproduced by running the pipeline)
+Data/ProcessedData/
+Data/Features/
+Data/Predict/
+Data/Simulation/
+Data/Output/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Jupyter
+.ipynb_checkpoints/

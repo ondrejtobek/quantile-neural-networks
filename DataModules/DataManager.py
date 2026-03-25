@@ -1,3 +1,5 @@
+"""Data-access layer for loading and slicing processed market, fundamental, and IBES datasets."""
+
 import os
 from datetime import datetime
 
@@ -7,17 +9,27 @@ from dateutil.relativedelta import relativedelta
 
 
 class DataManager:
-    """
-    Main workhorse to fetch data to be used in the analysis
-    """
+    """Load, cache, and slice processed market, fundamental, and IBES datasets."""
 
     def ProcessInputs(self, Inputs):
-        """
-        function that checks inputs and respahes them for internal purpouses
+        """Normalize requested inputs before loading source datasets.
+
+        Ensures that market-cap columns are fetched from `dt` when requested
+        by fundamental inputs.
+
+        Args:
+            Inputs (dict | None): Input specification dictionary.
+
+        Returns:
+            dict | None: Normalized input specification dictionary.
         """
 
         # if MC in FT then add it to dt
-        if (Inputs != None) and ("FT" in Inputs.keys()) and ("MC" in Inputs["FT"]["items"]):
+        if (
+            (Inputs != None)
+            and ("FT" in Inputs.keys())
+            and ("MC" in Inputs["FT"]["items"])
+        ):
             if "dt" in Inputs.keys():
                 if not "MC" in Inputs["dt"]["items"]:
                     Inputs["dt"]["items"] = Inputs["dt"]["items"] + ["MC"]
@@ -26,9 +38,7 @@ class DataManager:
         return Inputs
 
     def InitDBs(self):
-        """
-        initialize individual datasets
-        """
+        """Load and cache each requested source dataset into memory."""
 
         # for market data
         if (self.Inputs == None) or ("dt" in self.Inputs.keys()):
@@ -39,12 +49,21 @@ class DataManager:
                 end = self.Date.strftime("%Y-%m-%d")
             else:
                 items = self.Inputs["dt"]["items"] + ["DTID", "date", "region"]
-                start = (self.Date + relativedelta(months=self.Inputs["dt"]["start"])).strftime("%Y-%m-%d")
-                end = (self.Date + relativedelta(months=self.Inputs["dt"]["end"])).strftime("%Y-%m-%d")
+                start = (
+                    self.Date + relativedelta(months=self.Inputs["dt"]["start"])
+                ).strftime("%Y-%m-%d")
+                end = (
+                    self.Date + relativedelta(months=self.Inputs["dt"]["end"])
+                ).strftime("%Y-%m-%d")
 
-            dt = pd.read_parquet(os.path.join(self.sPath, "ProcessedData", self.dtName + ".gzip"), columns=items)
+            dt = pd.read_parquet(
+                os.path.join(self.sPath, "ProcessedData", self.dtName + ".gzip"),
+                columns=items,
+            )
             if self.region != None:
-                dt = dt.loc[(dt.region == self.region) & (dt.date < end) & (dt.date >= start)].copy()
+                dt = dt.loc[
+                    (dt.region == self.region) & (dt.date < end) & (dt.date >= start)
+                ].copy()
             else:
                 dt = dt.loc[(dt.date < end) & (dt.date >= start)].copy()
             dt.set_index(["DTID", "date"], inplace=True)
@@ -60,14 +79,27 @@ class DataManager:
                 start = (self.Date + relativedelta(months=-258)).strftime("%Y-%m-%d")
                 end = self.Date.strftime("%Y-%m-%d")
             else:
-                items = [item for item in self.Inputs["FT"]["items"] if item not in ["DTID", "FinYearEnd"]]
+                items = [
+                    item
+                    for item in self.Inputs["FT"]["items"]
+                    if item not in ["DTID", "FinYearEnd"]
+                ]
                 items += ["DTID", "FinYearEnd", "FTID", "date", "region"]
-                start = (self.Date + relativedelta(months=self.Inputs["FT"]["start"])).strftime("%Y-%m-%d")
-                end = (self.Date + relativedelta(months=self.Inputs["FT"]["end"])).strftime("%Y-%m-%d")
+                start = (
+                    self.Date + relativedelta(months=self.Inputs["FT"]["start"])
+                ).strftime("%Y-%m-%d")
+                end = (
+                    self.Date + relativedelta(months=self.Inputs["FT"]["end"])
+                ).strftime("%Y-%m-%d")
 
-            FT = pd.read_parquet(os.path.join(self.sPath, "ProcessedData", self.FTName + ".gzip"), columns=items)
+            FT = pd.read_parquet(
+                os.path.join(self.sPath, "ProcessedData", self.FTName + ".gzip"),
+                columns=items,
+            )
             if self.region != None:
-                FT = FT.loc[(FT.region == self.region) & (FT.date < end) & (FT.date >= start)].copy()
+                FT = FT.loc[
+                    (FT.region == self.region) & (FT.date < end) & (FT.date >= start)
+                ].copy()
             else:
                 FT = FT.loc[(FT.date < end) & (FT.date >= start)].copy()
             FT.set_index(["FTID", "date"], inplace=True)
@@ -81,15 +113,30 @@ class DataManager:
             if self.Inputs == None:
                 self.IBESsum = pd.DataFrame()
             else:
-                items = self.Inputs["IBESsum"]["items"] + ["DTID", "PERMNO", "date", "region"]
-                start = (self.Date + relativedelta(months=self.Inputs["IBESsum"]["start"])).strftime("%Y-%m-%d")
-                end = (self.Date + relativedelta(months=self.Inputs["IBESsum"]["end"])).strftime("%Y-%m-%d")
+                items = self.Inputs["IBESsum"]["items"] + [
+                    "DTID",
+                    "PERMNO",
+                    "date",
+                    "region",
+                ]
+                start = (
+                    self.Date + relativedelta(months=self.Inputs["IBESsum"]["start"])
+                ).strftime("%Y-%m-%d")
+                end = (
+                    self.Date + relativedelta(months=self.Inputs["IBESsum"]["end"])
+                ).strftime("%Y-%m-%d")
                 IBES = pd.read_parquet(
-                    os.path.join(self.sPath, "ProcessedData", self.IBESsumName + ".gzip"),
+                    os.path.join(
+                        self.sPath, "ProcessedData", self.IBESsumName + ".gzip"
+                    ),
                     columns=items,
                 )
                 if self.region != None:
-                    IBES = IBES.loc[(IBES.region == self.region) & (IBES.date < end) & (IBES.date >= start)].copy()
+                    IBES = IBES.loc[
+                        (IBES.region == self.region)
+                        & (IBES.date < end)
+                        & (IBES.date >= start)
+                    ].copy()
                 else:
                     IBES = IBES.loc[(IBES.date < end) & (IBES.date >= start)].copy()
                 self.IBESsum = self.ProcessIBES(IBES)
@@ -102,15 +149,30 @@ class DataManager:
             if self.Inputs == None:
                 self.IBESdet = pd.DataFrame()
             else:
-                items = self.Inputs["IBESdet"]["items"] + ["DTID", "PERMNO", "date", "region"]
-                start = (self.Date + relativedelta(months=self.Inputs["IBESdet"]["start"])).strftime("%Y-%m-%d")
-                end = (self.Date + relativedelta(months=self.Inputs["IBESdet"]["end"])).strftime("%Y-%m-%d")
+                items = self.Inputs["IBESdet"]["items"] + [
+                    "DTID",
+                    "PERMNO",
+                    "date",
+                    "region",
+                ]
+                start = (
+                    self.Date + relativedelta(months=self.Inputs["IBESdet"]["start"])
+                ).strftime("%Y-%m-%d")
+                end = (
+                    self.Date + relativedelta(months=self.Inputs["IBESdet"]["end"])
+                ).strftime("%Y-%m-%d")
                 IBES = pd.read_parquet(
-                    os.path.join(self.sPath, "ProcessedData", self.IBESdetName + ".gzip"),
+                    os.path.join(
+                        self.sPath, "ProcessedData", self.IBESdetName + ".gzip"
+                    ),
                     columns=items,
                 )
                 if self.region != None:
-                    IBES = IBES.loc[(IBES.region == self.region) & (IBES.date < end) & (IBES.date >= start)].copy()
+                    IBES = IBES.loc[
+                        (IBES.region == self.region)
+                        & (IBES.date < end)
+                        & (IBES.date >= start)
+                    ].copy()
                 else:
                     IBES = IBES.loc[(IBES.date < end) & (IBES.date >= start)].copy()
                 self.IBESdet = self.ProcessIBES(IBES)
@@ -118,8 +180,10 @@ class DataManager:
             self.IBESdet = pd.DataFrame()
 
     def FetchDBs(self, DBs):
-        """
-        method to fetch DBs from in memory instance of DataManager so that SQL is not run each time
+        """Reuse preloaded datasets from another `DataManager` instance.
+
+        Args:
+            DBs (DataManager): Existing manager instance with cached datasets.
         """
 
         DBs.Date = self.Date
@@ -134,9 +198,10 @@ class DataManager:
             self.IBESdet = FetchedData["IBESdet"]
 
     def ProcessFT(self):
-        """
-        method that adds the latest capitalization to the last observation of FT and drops duplicated financial
-        year-firm observations
+        """Post-process fundamentals by adding latest market cap and deduplicating.
+
+        Adds most recent capitalization to near-current fiscal observations and
+        keeps one record per firm fiscal year.
         """
 
         FT = self.FT
@@ -147,7 +212,9 @@ class DataManager:
             MC.rename(columns={"MC": "MClast"}, inplace=True)
             FT = FT.merge(MC, how="left", on="DTID")
             FT.loc[
-                (FT["date"] > self.Date + relativedelta(months=-12)) & (FT["MClast"].isnull() == False), "MC"
+                (FT["date"] > self.Date + relativedelta(months=-12))
+                & (FT["MClast"].isnull() == False),
+                "MC",
             ] = FT["MClast"]
             del FT["MClast"], MC
 
@@ -159,8 +226,13 @@ class DataManager:
         self.FT = FT
 
     def ProcessIBES(self, IBES):
-        """
-        method that selects appropriate DTID for IBES depending on data source
+        """Standardize IBES identifiers and index columns for downstream joins.
+
+        Args:
+            IBES (pd.DataFrame): Raw IBES table loaded from disk.
+
+        Returns:
+            pd.DataFrame: IBES table indexed by `DTID` and `date`.
         """
 
         # use PERMNO for CRSP
@@ -172,8 +244,13 @@ class DataManager:
         return IBES
 
     def fetch(self, Input):
-        """
-        callable function to provide required inputs
+        """Return date-windowed slices for each requested input table.
+
+        Args:
+            Input (dict): Input specification with table names, windows, and columns.
+
+        Returns:
+            dict[str, pd.DataFrame]: Requested slices keyed by table name.
         """
 
         Output = {}
@@ -228,13 +305,26 @@ class DataManager:
         return Output
 
     def __init__(self, sPath, Date, source="DST", region=None, Inputs=None, DBs=None):
+        """Initialize the data manager.
+
+        Args:
+            sPath (str): Path to the project root containing input/output files.
+            Date (int): Reference date for data slicing.
+            source (str, optional): Source dataset family (`DST` or `WRDS`).
+            region (str, optional): Region filter used when loading data.
+            Inputs (dict | None, optional): Input specification dictionary.
+            DBs (DataManager | None, optional): Optional preloaded DataManager instance.
+
+        """
         self.sPath = sPath
         if isinstance(Date, datetime):
             self.Date = Date
         elif type(Date) == str:
             self.Date = datetime.strptime(Date, "%Y-%m-%d")
         else:
-            raise Exception("Please provide date in either string '%Y-%m-%d' or datetime.datetime object.")
+            raise Exception(
+                "Please provide date in either string '%Y-%m-%d' or datetime.datetime object."
+            )
         self.source = source
         if source == "DST":
             self.dtName = "DST"
@@ -243,7 +333,9 @@ class DataManager:
             self.dtName = "CRSP"
             self.FTName = "Compustat"
         else:
-            raise Exception("Currently only WRDS and DST is supported as a source of data.")
+            raise Exception(
+                "Currently only WRDS and DST is supported as a source of data."
+            )
         self.IBESsumName = "IBESsum"
         self.IBESdetName = "IBESdet"
         self.region = region

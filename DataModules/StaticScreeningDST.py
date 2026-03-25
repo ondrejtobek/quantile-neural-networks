@@ -1,3 +1,5 @@
+"""Rule-based screening script for constructing the Datastream equity universe."""
+
 import os
 import pandas as pd
 
@@ -30,9 +32,14 @@ data["keep"] = False
 data.loc[data["TRAC"].isin(["ORD", "FULLPAID"]), "keep"] = True
 # BRAZIL - keep PN for the most traded shares and discard otherwise
 data.loc[data["EXDSCD"] == "SP", "keep"] = False
-data.loc[(data["EXDSCD"] == "SP") & (data["TRAC"].isin(["ORD", "FULLPAID", "PRF"])), "keep"] = True
 data.loc[
-    (data["EXDSCD"] == "SP") & (data["NAME"].transform(lambda x: "PN" in x)) & (data["MAJOR"] == "N"), "keep"
+    (data["EXDSCD"] == "SP") & (data["TRAC"].isin(["ORD", "FULLPAID", "PRF"])), "keep"
+] = True
+data.loc[
+    (data["EXDSCD"] == "SP")
+    & (data["NAME"].transform(lambda x: "PN" in x))
+    & (data["MAJOR"] == "N"),
+    "keep",
 ] = False
 data.loc[(data["TRAC"].isnull() == True), "keep"] = True
 
@@ -41,7 +48,10 @@ data = data.loc[data["keep"] == True].copy()
 
 ### US - filter using CUSIP
 # throw out stocks with missing CUSIP (3.5k securities)
-data.loc[((data["EXDSCD"].isin(["AX", "NY", "NL", "NS", "OB"])) & (data["LOC"].isnull())), "keep"] = False
+data.loc[
+    ((data["EXDSCD"].isin(["AX", "NY", "NL", "NS", "OB"])) & (data["LOC"].isnull())),
+    "keep",
+] = False
 data = data.loc[data["keep"] == True].copy()
 del data["keep"]
 
@@ -114,6 +124,14 @@ simple_eliminate = [
 
 
 def delete_if_contains(df, column_name, list_of_problems):
+    """Mark rows for exclusion when a string appears in a text column.
+
+    Args:
+        df (pd.DataFrame): Security-universe table containing `NAME` and `drop`.
+        column_name (str): Column name to inspect for substring matches.
+        list_of_problems (list[str]): List of substrings triggering row exclusion.
+
+    """
     for problem in list_of_problems:
         dropping_condition = df[column_name].apply(lambda x: problem in x)
         df.loc[dropping_condition, "drop"] = True
@@ -123,21 +141,34 @@ delete_if_contains(data, "NAME", simple_eliminate)
 
 ### Special eliminations (more than simple NAME or NAME + EXDSCD condition)
 #
-data.loc[(data["NAME"].apply(lambda x: "PB" in x)) & (data["EXDSCD"] == "SE") & (data["MAJOR"] != "Y"), "drop"] = (
-    True
-)
+data.loc[
+    (data["NAME"].apply(lambda x: "PB" in x))
+    & (data["EXDSCD"] == "SE")
+    & (data["MAJOR"] != "Y"),
+    "drop",
+] = True
 # deferred equities in Australia
 data.loc[
-    (data["NAME"].apply(lambda x: "DEF" in x)) & (data["EXDSCD"] == "SY") & (data["MAJOR"] != "Y"), "drop"
+    (data["NAME"].apply(lambda x: "DEF" in x))
+    & (data["EXDSCD"] == "SY")
+    & (data["MAJOR"] != "Y"),
+    "drop",
 ] = True
 #
 data.loc[
-    (data["NAME"].apply(lambda x: "UTS" in x)) & (data["EXDSCD"] == "TR") & (data["TRAC"] != "ORD"), "drop"
+    (data["NAME"].apply(lambda x: "UTS" in x))
+    & (data["EXDSCD"] == "TR")
+    & (data["TRAC"] != "ORD"),
+    "drop",
 ] = True
 # options
-data.loc[(data["NAME"].apply(lambda x: "OPTIONS" in x)) & (data["MAJOR"] != "Y"), "drop"] = True
+data.loc[
+    (data["NAME"].apply(lambda x: "OPTIONS" in x)) & (data["MAJOR"] != "Y"), "drop"
+] = True
 # unit trusts
-data.loc[(data["NAME"].apply(lambda x: "UNITS" in x)) & (data["ESTAT"] != "ACT."), "drop"] = True
+data.loc[
+    (data["NAME"].apply(lambda x: "UNITS" in x)) & (data["ESTAT"] != "ACT."), "drop"
+] = True
 # rights
 data.loc[
     (data["NAME"].apply(lambda x: "RIGHTS" in x))
@@ -146,7 +177,11 @@ data.loc[
     "drop",
 ] = True
 # $ where it means preferrential dividend and not currency
-data.loc[(data["NAME"].apply(lambda x: "$" in x)) & (~data["NAME"].apply(lambda x: "U$" in x)), "drop"] = True
+data.loc[
+    (data["NAME"].apply(lambda x: "$" in x))
+    & (~data["NAME"].apply(lambda x: "U$" in x)),
+    "drop",
+] = True
 
 # dictionary with key being NAME and value being list of EXDSCD values in which obs. cannot be
 conditions_name_exchg = {
@@ -155,7 +190,21 @@ conditions_name_exchg = {
     "SHIP INV": ["SE"],
     "WARRANT": ["LN", "BK", "WL", "NY", "TR"],
     "DFD": ["LN", "SY"],
-    "FUND": ["TA", "BK", "SE", "SL", "JN", "MI", "LB", "KA", "LX", "HK", "BR", "SY", "WA"],
+    "FUND": [
+        "TA",
+        "BK",
+        "SE",
+        "SL",
+        "JN",
+        "MI",
+        "LB",
+        "KA",
+        "LX",
+        "HK",
+        "BR",
+        "SY",
+        "WA",
+    ],
     "RTS.": ["WL", "TR"],
     "UTS": ["SY"],  # unit trusts
     "CERT.": ["VN", "BR", "CP", "HL", "PR", "FF", "BD", "AM", "ZU", "OS", "TA", "IS"],
@@ -194,6 +243,13 @@ conditions_name_exchg = {
 
 # delete stocks
 def delete_if_contains_and_exchg(df, conditions_dict):
+    """Mark rows for exclusion based on text and exchange filters.
+
+    Args:
+        df (pd.DataFrame): Security-universe table containing `NAME`, `EXDSCD`, and `drop`.
+        conditions_dict (dict[str, list[str]]): Mapping from substrings to disallowed exchange lists.
+
+    """
     for _ in conditions_dict.items():
         name = _[0]
         exchg_list = _[1]

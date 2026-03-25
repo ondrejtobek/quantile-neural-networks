@@ -1,3 +1,5 @@
+"""ETL utilities for converting raw vendor files into standardized processed datasets."""
+
 import os
 import re
 from datetime import datetime
@@ -9,7 +11,9 @@ import pandas as pd
 from dateutil.relativedelta import relativedelta
 
 
-def ProcessData(sPath, RunDB=["CRSP", "DST", "WorldScope", "Compustat", "IBESsum", "IBESdet"]):
+def ProcessData(
+    sPath, RunDB=["CRSP", "DST", "WorldScope", "Compustat", "IBESsum", "IBESdet"]
+):
     """
     defines function to process raw data and save it in a format retrievable by python
     arguments:
@@ -23,14 +27,18 @@ def ProcessData(sPath, RunDB=["CRSP", "DST", "WorldScope", "Compustat", "IBESsum
     if "CRSP" in RunDB:
         print("Processing daily CRSP")
         CRSP = ProcessCRSPData(sPath)
-        CRSP.to_parquet(os.path.join(sPath, "ProcessedData", "CRSP.gzip"), compression="gzip")
+        CRSP.to_parquet(
+            os.path.join(sPath, "ProcessedData", "CRSP.gzip"), compression="gzip"
+        )
         del CRSP
         print("CRSP done")
 
     if "DST" in RunDB:
         print("Processing daily Datastream")
         DST = ProcessDSTData(sPath)
-        DST.to_parquet(os.path.join(sPath, "ProcessedData", "DST.gzip"), compression="gzip")
+        DST.to_parquet(
+            os.path.join(sPath, "ProcessedData", "DST.gzip"), compression="gzip"
+        )
         del DST
         print("DST done")
 
@@ -38,7 +46,9 @@ def ProcessData(sPath, RunDB=["CRSP", "DST", "WorldScope", "Compustat", "IBESsum
         print("Processing WorldScope")
         WorldScope = ProcessWorldScopeData(sPath)
         WorldScope = FTAddMC(WorldScope, sPath, DTtype="DST")
-        WorldScope.to_parquet(os.path.join(sPath, "ProcessedData", "WorldScope.gzip"), compression="gzip")
+        WorldScope.to_parquet(
+            os.path.join(sPath, "ProcessedData", "WorldScope.gzip"), compression="gzip"
+        )
         del WorldScope
         print("WorldScope done")
 
@@ -46,28 +56,36 @@ def ProcessData(sPath, RunDB=["CRSP", "DST", "WorldScope", "Compustat", "IBESsum
         print("Processing Compustat")
         Compustat = ProcessCompustatData(sPath)
         Compustat = FTAddMC(Compustat, sPath, DTtype="CRSP")
-        Compustat.to_parquet(os.path.join(sPath, "ProcessedData", "Compustat.gzip"), compression="gzip")
+        Compustat.to_parquet(
+            os.path.join(sPath, "ProcessedData", "Compustat.gzip"), compression="gzip"
+        )
         del Compustat
         print("Compustat done")
 
     if "CRSPm" in RunDB:
         print("Processing monthly CRSP")
         CRSPm = ProcessCRSPMonthlyData(sPath)
-        CRSPm.to_parquet(os.path.join(sPath, "ProcessedData", "CRSPm.gzip"), compression="gzip")
+        CRSPm.to_parquet(
+            os.path.join(sPath, "ProcessedData", "CRSPm.gzip"), compression="gzip"
+        )
         del CRSPm
         print("CRSP monthly done")
 
     if "IBESsum" in RunDB:
         print("Processing IBES summary")
         ibes = ProcessIBESsum(sPath)
-        ibes.to_parquet(os.path.join(sPath, "ProcessedData", "IBESsum.gzip"), compression="gzip")
+        ibes.to_parquet(
+            os.path.join(sPath, "ProcessedData", "IBESsum.gzip"), compression="gzip"
+        )
         del ibes
         print("IBES summary done")
 
     if "IBESdet" in RunDB:
         print("Processing IBES detailed")
         ibes = ProcessIBESdet(sPath)
-        ibes.to_parquet(os.path.join(sPath, "ProcessedData", "IBESdet.gzip"), compression="gzip")
+        ibes.to_parquet(
+            os.path.join(sPath, "ProcessedData", "IBESdet.gzip"), compression="gzip"
+        )
         del ibes
         print("IBES detailed done")
 
@@ -76,7 +94,9 @@ def ProcessData(sPath, RunDB=["CRSP", "DST", "WorldScope", "Compustat", "IBESsum
 
 def ProcessInflation(sPath):
     """loads US inflation data"""
-    infl = pd.read_csv(os.path.join(sPath, "Inputs", "CPIAUCNS.csv"), header=0, low_memory=False)
+    infl = pd.read_csv(
+        os.path.join(sPath, "Inputs", "CPIAUCNS.csv"), header=0, low_memory=False
+    )
     infl.rename(columns={"CPIAUCNS": "CPI", "DATE": "date"}, inplace=True)
     infl["date"] = pd.to_datetime(infl["date"].astype(str), format="%d/%m/%Y")
     infl["CPI"] = infl["CPI"] / 77.8  # convert to 1980 level
@@ -99,7 +119,11 @@ def ProcessCompustatData(sPath):
     )
 
     ## add CRSP ID link
-    link = pd.read_csv(os.path.join(sPath, "Inputs", "crsp.ccmxpf_linktable.csv"), header=0, low_memory=False)
+    link = pd.read_csv(
+        os.path.join(sPath, "Inputs", "crsp.ccmxpf_linktable.csv"),
+        header=0,
+        low_memory=False,
+    )
     del link["usedflag"]
     link["linkdt"] = pd.to_datetime(link["linkdt"])
     link["linkenddt"] = pd.to_datetime(link["linkenddt"])
@@ -114,7 +138,9 @@ def ProcessCompustatData(sPath):
     link["order"] = link.groupby("gvkey").cumcount()
     FT["lpermno"] = np.nan
     for order in link["order"].unique():
-        FT = pd.merge_asof(FT, link.loc[link["order"] == order], on="datadate", by="gvkey")
+        FT = pd.merge_asof(
+            FT, link.loc[link["order"] == order], on="datadate", by="gvkey"
+        )
         FT["add"] = False
         FT.loc[
             (
@@ -126,15 +152,25 @@ def ProcessCompustatData(sPath):
         ] = True
         for col in link_cols:
             FT.loc[FT["add"], col] = FT[col + "_"]
-        FT.drop([col + "_" for col in link_cols] + ["order", "add"], axis=1, inplace=True)
+        FT.drop(
+            [col + "_" for col in link_cols] + ["order", "add"], axis=1, inplace=True
+        )
 
     ## filter entries
-    FT = FT.loc[FT["datafmt"] == "STD"].copy()  # SUMM_STD has restated data e.g. post merger
-    FT = FT.loc[FT["indfmt"] == "INDL"].copy()  # there is a special format - expclude FS for financial servises
-    FT = FT.loc[FT["consol"] == "C"].copy()  # level of consolidation - C for consolidated
+    FT = FT.loc[
+        FT["datafmt"] == "STD"
+    ].copy()  # SUMM_STD has restated data e.g. post merger
+    FT = FT.loc[
+        FT["indfmt"] == "INDL"
+    ].copy()  # there is a special format - expclude FS for financial servises
+    FT = FT.loc[
+        FT["consol"] == "C"
+    ].copy()  # level of consolidation - C for consolidated
 
     ## add SIC
-    comp = pd.read_csv(os.path.join(sPath, "Inputs", "crsp.comphist.csv"), header=0, low_memory=False)
+    comp = pd.read_csv(
+        os.path.join(sPath, "Inputs", "crsp.comphist.csv"), header=0, low_memory=False
+    )
     comp["hchgdt"] = pd.to_datetime(comp["hchgdt"])
     comp["hchgenddt"] = pd.to_datetime(comp["hchgenddt"])
     comp["datadate"] = comp["hchgdt"]
@@ -145,14 +181,24 @@ def ProcessCompustatData(sPath):
     FT.rename({"hsic": "sic"}, axis=1, inplace=True)
 
     ## fill missing SIC with the latest data
-    comp = pd.read_csv(os.path.join(sPath, "Inputs", "crsp.comphead.csv"), header=0, low_memory=False)
+    comp = pd.read_csv(
+        os.path.join(sPath, "Inputs", "crsp.comphead.csv"), header=0, low_memory=False
+    )
     comp = comp[["gvkey", "sic"]].rename({"sic": "sic_add"}, axis=1)
     FT = FT.merge(comp, on="gvkey", how="left")
     FT.loc[FT["sic"].isnull(), "sic"] = FT["sic_add"]
     del FT["sic_add"]
 
     # rename identifiers to make them in line with other databases
-    FT.rename(columns={"lpermno": "DTID", "lpermco": "PERMCO", "datadate": "date", "gvkey": "FTID"}, inplace=True)
+    FT.rename(
+        columns={
+            "lpermno": "DTID",
+            "lpermco": "PERMCO",
+            "datadate": "date",
+            "gvkey": "FTID",
+        },
+        inplace=True,
+    )
     FT.sort_values(["FTID", "date"], inplace=True)
 
     # eliminate all companies without PERMCO, i.e. without possibility to make a link from FT to CRSP
@@ -193,10 +239,17 @@ def ProcessWorldScopeData(sPath):
     """loads WorldScope data"""
 
     # load fundamentals
-    FT = pd.read_csv(os.path.join(sPath, "Inputs", "DSTfundamental.csv"), header=0, low_memory=False, sep="\t")
+    FT = pd.read_csv(
+        os.path.join(sPath, "Inputs", "DSTfundamental.csv"),
+        header=0,
+        low_memory=False,
+        sep="\t",
+    )
     FT.rename(
         columns={
-            name: re.search("WC[0-9]*", name).group(0) for name in FT.columns if bool(re.search("WC[0-9]*", name))
+            name: re.search("WC[0-9]*", name).group(0)
+            for name in FT.columns
+            if bool(re.search("WC[0-9]*", name))
         },
         inplace=True,
     )
@@ -429,7 +482,20 @@ def ProcessDSTData(sPath):
         # change types
         dt["date"] = pd.to_datetime(dt["date"].astype(str), format="%Y-%m-%d")
         dt["DTID"] = dt["DTID"].astype(str)
-        floatcols = ["RI", "PRC", "ASK", "BID", "H", "L", "VOL", "AF", "CAI", "SHROUT", "RI_OC", "PRCunpadded"]
+        floatcols = [
+            "RI",
+            "PRC",
+            "ASK",
+            "BID",
+            "H",
+            "L",
+            "VOL",
+            "AF",
+            "CAI",
+            "SHROUT",
+            "RI_OC",
+            "PRCunpadded",
+        ]
         for colname in floatcols:
             dt[colname] = pd.to_numeric(dt[colname], errors="coerce")
 
@@ -454,14 +520,25 @@ def ProcessDSTData(sPath):
 
         ## discard holidays
         # load time series file with holidays
-        holidays = pd.read_csv(os.path.join(sPath, "Inputs", "DST_holidays_ts.csv"), sep="\t")
+        holidays = pd.read_csv(
+            os.path.join(sPath, "Inputs", "DST_holidays_ts.csv"), sep="\t"
+        )
         # load mapping of holiday lists
-        holidaysMap = pd.read_csv(os.path.join(sPath, "Inputs", "DST_holidays_map.csv"), sep="\t")
+        holidaysMap = pd.read_csv(
+            os.path.join(sPath, "Inputs", "DST_holidays_map.csv"), sep="\t"
+        )
         holidaysMap.dropna(inplace=True)
-        holidays.rename(columns={row[1]["MNEM"]: row[1]["GEOGN"] for row in holidaysMap.iterrows()}, inplace=True)
+        holidays.rename(
+            columns={row[1]["MNEM"]: row[1]["GEOGN"] for row in holidaysMap.iterrows()},
+            inplace=True,
+        )
         holidays.rename(columns={"dscd": "date"}, inplace=True)
-        holidays["date"] = pd.to_datetime(holidays["date"].astype(str), format="%Y-%m-%d")
-        holidays = pd.melt(holidays, id_vars=["date"], var_name="GEOGN", value_name="hol")
+        holidays["date"] = pd.to_datetime(
+            holidays["date"].astype(str), format="%Y-%m-%d"
+        )
+        holidays = pd.melt(
+            holidays, id_vars=["date"], var_name="GEOGN", value_name="hol"
+        )
         # keep all the observations at the start where the holiday distinction is missing
         holidays.fillna(1, inplace=True)
         holidays.loc[holidays.groupby("GEOGN").hol.cummin() == 1, "hol"] = 0
@@ -479,14 +556,19 @@ def ProcessDSTData(sPath):
         # the last value is wrongly labled as padded if discarded based on PRC
         # dt.loc[dt['PaddedPRC'] != dt.groupby('DTID').PaddedPRC.shift(1), 'PaddedPRC'] = 0
         # discard values only if missing for more than one month
-        dt["PaddedPRC"] = dt["PaddedPRC"] * (dt["PaddedPRC"].groupby("DTID").transform("sum") > 20)
+        dt["PaddedPRC"] = dt["PaddedPRC"] * (
+            dt["PaddedPRC"].groupby("DTID").transform("sum") > 20
+        )
         dt = dt.loc[dt["PaddedPRC"] == 0].copy()
         del dt["PaddedPRC"], dt["PRCunpadded"]
 
         ## discard probable errors in the data
         # discard prices that are larger than 100k dollars - checked it and it is all bugs ~ 10 tickers
         # except for '982325' Berkshire Hathaway A class
-        dt.loc[(dt.PRC > 100000) & (dt.index.get_level_values("DTID") != "982325"), ["PRC", "H", "L"]] = np.nan
+        dt.loc[
+            (dt.PRC > 100000) & (dt.index.get_level_values("DTID") != "982325"),
+            ["PRC", "H", "L"],
+        ] = np.nan
 
         # fix cases when AF happens but there are no trades so the price stays padded
         dt["l.RI"] = dt.groupby("DTID").RI.shift(1)
@@ -512,7 +594,10 @@ def ProcessDSTData(sPath):
         # volume is zero and the previous was padded then the next observation is also padded
         if dt.PaddedRI.sum() > 0:
             for i in range(5):
-                dt.loc[(dt["VOL"] == 0) & dt["PaddedRI"].groupby("DTID").shift(1), "PaddedRI"] = True
+                dt.loc[
+                    (dt["VOL"] == 0) & dt["PaddedRI"].groupby("DTID").shift(1),
+                    "PaddedRI",
+                ] = True
                 dt.loc[dt["PaddedRI"], "RI"] = dt["RI"].groupby("DTID").shift(1)
                 dt.loc[dt["PaddedRI"], "RI_OC"] = dt["RI_OC"].groupby("DTID").shift(1)
                 dt.loc[dt["PaddedRI"], "PRC"] = np.nan
@@ -521,20 +606,30 @@ def ProcessDSTData(sPath):
         # fix cases when there is a reversal the next day - usually just some error or strange quotes
         dt["l.RI_OC"] = dt.groupby("DTID").RI_OC.shift(1)
         dt["f.RI_OC"] = dt.groupby("DTID").RI_OC.shift(-1)
-        if dt.loc[(dt["RI"] / dt["l.RI"] > 2) & (dt["f.RI"] / dt["l.RI"] < 1.1)].shape[0] > 0:
-            dt.loc[(dt["RI"] / dt["l.RI"] > 2) & (dt["f.RI"] / dt["l.RI"] < 1.1), "RI_OC"] = (
-                dt["f.RI_OC"] + dt["l.RI_OC"]
-            ) / 2
-            dt.loc[(dt["RI"] / dt["l.RI"] > 2) & (dt["f.RI"] / dt["l.RI"] < 1.1), "RI"] = (
-                dt["f.RI"] + dt["l.RI"]
-            ) / 2
-        if dt.loc[(dt["RI"] / dt["l.RI"] < 0.5) & (dt["f.RI"] / dt["l.RI"] > 0.9)].shape[0] > 0:
-            dt.loc[(dt["RI"] / dt["l.RI"] < 0.5) & (dt["f.RI"] / dt["l.RI"] > 0.9), "RI_OC"] = (
-                dt["f.RI_OC"] + dt["l.RI_OC"]
-            ) / 2
-            dt.loc[(dt["RI"] / dt["l.RI"] < 0.5) & (dt["f.RI"] / dt["l.RI"] > 0.9), "RI"] = (
-                dt["f.RI"] + dt["l.RI"]
-            ) / 2
+        if (
+            dt.loc[(dt["RI"] / dt["l.RI"] > 2) & (dt["f.RI"] / dt["l.RI"] < 1.1)].shape[
+                0
+            ]
+            > 0
+        ):
+            dt.loc[
+                (dt["RI"] / dt["l.RI"] > 2) & (dt["f.RI"] / dt["l.RI"] < 1.1), "RI_OC"
+            ] = (dt["f.RI_OC"] + dt["l.RI_OC"]) / 2
+            dt.loc[
+                (dt["RI"] / dt["l.RI"] > 2) & (dt["f.RI"] / dt["l.RI"] < 1.1), "RI"
+            ] = (dt["f.RI"] + dt["l.RI"]) / 2
+        if (
+            dt.loc[
+                (dt["RI"] / dt["l.RI"] < 0.5) & (dt["f.RI"] / dt["l.RI"] > 0.9)
+            ].shape[0]
+            > 0
+        ):
+            dt.loc[
+                (dt["RI"] / dt["l.RI"] < 0.5) & (dt["f.RI"] / dt["l.RI"] > 0.9), "RI_OC"
+            ] = (dt["f.RI_OC"] + dt["l.RI_OC"]) / 2
+            dt.loc[
+                (dt["RI"] / dt["l.RI"] < 0.5) & (dt["f.RI"] / dt["l.RI"] > 0.9), "RI"
+            ] = (dt["f.RI"] + dt["l.RI"]) / 2
 
         # set RI to missing if daily return is larger than 500%
         #   most of these are just errors that screw up analysis when daily returns are used
@@ -568,7 +663,9 @@ def ProcessDSTData(sPath):
 
         # cap VOL if it is larger than 25% of market cap
         # VOL * PRC is in $ while MC is in million$
-        dt.loc[(dt.PRC * dt.VOL / 1000000) > (dt.MC * 0.25), "VOL"] = dt.MC * 0.25 * 1000000 / dt.PRC
+        dt.loc[(dt.PRC * dt.VOL / 1000000) > (dt.MC * 0.25), "VOL"] = (
+            dt.MC * 0.25 * 1000000 / dt.PRC
+        )
 
         # replace infinities with NA
         dt.replace([-np.inf, np.inf], np.nan, inplace=True)
@@ -721,7 +818,11 @@ def ProcessCRSPData(sPath):
     dt["AF"] = dt.groupby("DTID")["DISFACSHR"].cumprod()
     del dt["DISFACSHR"]
     last_AF = (
-        dt.loc[dt["AF"].notnull()].groupby("DTID")["AF"].last().reset_index().rename({"AF": "AF_last"}, axis=1)
+        dt.loc[dt["AF"].notnull()]
+        .groupby("DTID")["AF"]
+        .last()
+        .reset_index()
+        .rename({"AF": "AF_last"}, axis=1)
     )
     dt = dt.merge(last_AF, on="DTID", how="left")
     dt["AF_last"] = dt["AF_last"].fillna(1)
@@ -730,9 +831,13 @@ def ProcessCRSPData(sPath):
 
     ## subset to the 3 primary exchanges in the US and common equity
     # need to use special tables with the information
-    issuer = pd.read_csv(os.path.join(sPath, "Inputs", "crsp.stkissuerinfohist.csv"), header=0)
+    issuer = pd.read_csv(
+        os.path.join(sPath, "Inputs", "crsp.stkissuerinfohist.csv"), header=0
+    )
     issuer.columns = [i.upper() for i in issuer.columns]
-    issue = pd.read_csv(os.path.join(sPath, "Inputs", "crsp.stksecurityinfohist.csv"), header=0)
+    issue = pd.read_csv(
+        os.path.join(sPath, "Inputs", "crsp.stksecurityinfohist.csv"), header=0
+    )
     issue.columns = [i.upper() for i in issue.columns]
     # the same as DT.EXCHCD.isin([1, 2, 3]) -> subset to NYSE, AMEX, NASDAQ
     issue = issue.loc[
@@ -744,9 +849,15 @@ def ProcessCRSPData(sPath):
     ].copy()
     # the same as DT.SHRCD.isin([10, 11])
     issue = issue.loc[
-        ((issue["SHARETYPE"] == "NS") & (issue["SECURITYTYPE"] == "EQTY") & (issue["SECURITYSUBTYPE"] == "COM"))
+        (
+            (issue["SHARETYPE"] == "NS")
+            & (issue["SECURITYTYPE"] == "EQTY")
+            & (issue["SECURITYSUBTYPE"] == "COM")
+        )
     ].copy()
-    issuer = issuer.loc[((issuer["USINCFLG"] == "Y") & issuer["ISSUERTYPE"].isin(["ACOR", "CORP"]))].copy()
+    issuer = issuer.loc[
+        ((issuer["USINCFLG"] == "Y") & issuer["ISSUERTYPE"].isin(["ACOR", "CORP"]))
+    ].copy()
     issue.rename({"SECINFOSTARTDT": "date", "PERMNO": "DTID"}, axis=1, inplace=True)
     issuer.rename({"ISSINFOSTARTDT": "date"}, axis=1, inplace=True)
     issue["date"] = pd.to_datetime(issue["date"])
@@ -755,9 +866,15 @@ def ProcessCRSPData(sPath):
     issue.sort_values("date", inplace=True)
     issuer.sort_values("date", inplace=True)
     dt.sort_values("date", inplace=True)
-    dt = pd.merge_asof(dt, issue[["DTID", "date", "SECINFOENDDT"]], on="date", by="DTID")
-    dt = pd.merge_asof(dt, issuer[["PERMCO", "date", "ISSINFOENDDT"]], on="date", by="PERMCO")
-    dt = dt.loc[(dt["date"] <= dt["ISSINFOENDDT"]) & (dt["date"] <= dt["SECINFOENDDT"])].copy()
+    dt = pd.merge_asof(
+        dt, issue[["DTID", "date", "SECINFOENDDT"]], on="date", by="DTID"
+    )
+    dt = pd.merge_asof(
+        dt, issuer[["PERMCO", "date", "ISSINFOENDDT"]], on="date", by="PERMCO"
+    )
+    dt = dt.loc[
+        (dt["date"] <= dt["ISSINFOENDDT"]) & (dt["date"] <= dt["SECINFOENDDT"])
+    ].copy()
     del dt["ISSINFOENDDT"], dt["SECINFOENDDT"]
 
     # add region
@@ -810,10 +927,14 @@ def ProcessIBESsum(sPath):
         "meanest",
     ]
     ibes = pd.read_csv(
-        os.path.join(sPath, "Inputs", "ibes.statsumu_epsus.csv"), usecols=ibes_cols, low_memory=False
+        os.path.join(sPath, "Inputs", "ibes.statsumu_epsus.csv"),
+        usecols=ibes_cols,
+        low_memory=False,
     )
     ibes_int = pd.read_csv(
-        os.path.join(sPath, "Inputs", "ibes.statsumu_epsint.csv"), usecols=ibes_cols, low_memory=False
+        os.path.join(sPath, "Inputs", "ibes.statsumu_epsint.csv"),
+        usecols=ibes_cols,
+        low_memory=False,
     )
     ibes = pd.concat([ibes, ibes_int])
     ibes.columns = [i.upper() for i in ibes.columns]
@@ -827,7 +948,10 @@ def ProcessIBESsum(sPath):
     ibes.sort_index(inplace=True)
 
     # load file with currencies - have to convert all estimates to USD
-    curr = pd.read_csv(os.path.join(sPath, "Inputs", "ibes.hdxrati.csv"), usecols=["exrat", "curr", "anndats"])
+    curr = pd.read_csv(
+        os.path.join(sPath, "Inputs", "ibes.hdxrati.csv"),
+        usecols=["exrat", "curr", "anndats"],
+    )
     curr.rename(columns={"anndats": "date", "curr": "CURCODE"}, inplace=True)
     curr["date"] = pd.to_datetime(curr["date"].astype(str))
     curr = curr.drop_duplicates(subset=["CURCODE", "date"], keep="last")
@@ -908,7 +1032,9 @@ def ProcessIBESdet(sPath):
 
     ## add DST tickers
     static = pd.read_csv(
-        os.path.join(sPath, "Inputs", "DSTstatic.csv"), header=0, usecols=["DSCD", "IBTKR", "region"]
+        os.path.join(sPath, "Inputs", "DSTstatic.csv"),
+        header=0,
+        usecols=["DSCD", "IBTKR", "region"],
     )
     static.rename({"DSCD": "DTID", "IBTKR": "TICKER"}, inplace=True, axis=1)
     static["TICKER"] = static["TICKER"].transform(corr_ticker)
@@ -924,10 +1050,14 @@ def FTAddMC(FT, sPath, DTtype="DST"):
     if DTtype == "DST":
         # for DST have to also ad ajex which is not readily available for WorldScope
         MC = pd.read_parquet(
-            os.path.join(sPath, "ProcessedData", "DST.gzip"), columns=["date", "DTID", "MC", "AF"]
+            os.path.join(sPath, "ProcessedData", "DST.gzip"),
+            columns=["date", "DTID", "MC", "AF"],
         )
     elif DTtype == "CRSP":
-        MC = pd.read_parquet(os.path.join(sPath, "ProcessedData", "CRSP.gzip"), columns=["date", "DTID", "MC"])
+        MC = pd.read_parquet(
+            os.path.join(sPath, "ProcessedData", "CRSP.gzip"),
+            columns=["date", "DTID", "MC"],
+        )
     else:
         raise Exception("Only DST and CRSP supported.")
 
