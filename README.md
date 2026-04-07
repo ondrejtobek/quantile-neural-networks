@@ -67,9 +67,11 @@ Minimum working example is provided in ChampionModel.ipynb which produces foreca
 | **RAM** | 128 GB |
 | **Python** | 3.12 |
 
-**Language:** Python 3.12
-**Package manager:** conda / pip
-**Key dependencies** (see `requirements.txt` for full list with pinned versions):
+
+- **Language:** Python 3.12
+- **Package manager:** conda / pip
+- **Key dependencies** (see `requirements.txt` for full list with pinned versions):
+
 
 | Package | Version | Purpose |
 |---|---|---|
