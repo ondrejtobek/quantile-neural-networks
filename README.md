@@ -14,46 +14,42 @@ Minimum working example is provided in ChampionModel.ipynb which produces foreca
 
 - **Date assembled:** April 2026
 - **Authors:** Jozef Barunik (`barunik@fsv.cuni.cz`), Martin Hronec, Ondrej Tobek
-- **Affiliation:** Charles University, Institute of Economic Studies
 - **License:** MIT
 
 ---
 
 ## Repository Structure
 
-**TBA** create the file map incorporating the table below.
-
 ```
 .
-├── Data/                       # Data
-...
+├── Data/                       # Data folder
+│   └── Inputs/                 # Input data folder
+├── DataModules/                # Helper functions for data processing
+│   ├── DataManager.py          # Helper class to handle data for backtesting
+│   ├── ProcessData.py          # Helper functions to process raw input data
+│   └── StaticScreeningDST.py   # Script used to filter universe of Datastream stocks. Need not be run
+├── EstimationFunctions/        # Helper functions for estimation
+│   ├── GARCH_Functions.py      # Functions to estimate and simulate GARCH as benchmark for distribution forecasts
+│   ├── NN_Functions.py         # Functions to estimate neural networks, derive distribution moments, and to do analytics
+│   └── SimulationFunctions.py  # Functions used for simulations in robustness tests
+├── Signals/                    # Helper functions to create stock features
+│   ├── CreateSignals.py        # Functions to create features and returns for estimation, forecasting, and analytics
+│   ├── SignalClass.py          # Parent class to create individual signals
+│   ├── Fundamental.py          # Classes to create fundamental data signals
+│   ├── IBES.py                 # Classes to create analyst forecast signals
+│   ├── Market.py               # Classes to create market data signals
+│   └── Volatility.py           # Classes to create volatility signals
+├── 01_CreateData.py            # Script to process all the data for estimation, forecasting, and analytics
+├── 02_QuantileNN_Estimation.py # Script to estimate models with neural network and do forecasting
+├── 03_GARCH_Estimation.py      # Script to estimate and simulate GARCH as benchmark for distribution forecasts
+├── 04_DistributionMoments.py   # Script to derive distribution moments from quantile forecasts
+├── 05_Analytics.py             # Main script to produce the tables
+├── 06_RobustnessGBRT_RF.py     # Robustness tests with tree-based methods
+├── 06_RobustnessSimulation.py  # Robustness tests with simulations
+├── ChampionModel.ipynb         # Minimum working example to run the champion model using WRDS data in the US
 ├── requirements.txt            # All Python dependencies with versions
 └── README.md                   # This file
 ```
-
-| File | Type | Description |
-|------|------|-------------|
-| DataModules/DataManager.py | Helper functions | Helper class to handle data for backtesting. Loads appropriate data and subsets to the relevant time snapshots. |
-| DataModules/ProcessData.py | Helper functions | Helper functions to process raw input data. |
-| DataModules/StaticScreeningDST.py | Helper functions | Script used to filter universe of Datastream stocks. Need not be run. |
-| EstimationFunctions/GARCH_Functions.py | Helper functions | Functions to estimate and simulate GARCH as benchmark for distribution forecasts. |
-| EstimationFunctions/NN_Functions.py | Helper functions | Functions to estimate neural networks, derive distribution moments, and to do analytics. |
-| EstimationFunctions/SimulationFunctions.py | Helper functions | Functions used for simulations in robustness tests. |
-| Signals/CreateSignals.py | Helper functions | Functions to create features and returns for estimation, forecasting, and analytics. |
-| Signals/SignalClass.py | Helper functions | Parent class to create individual signals. |
-| Signals/Fundamental.py | Helper functions | Classes to create fundamental data signals. |
-| Signals/IBES.py | Helper functions | Classes to create analyst forecast signals. |
-| Signals/Market.py | Helper functions | Classes to create market data signals. |
-| Signals/Volatility.py | Helper functions | Classes to create volatility signals. |
-| 01_CreateData.py | Run script | Script to process all the data for estimation, forecasting, and analytics. |
-| 02_QuantileNN_Estimation.py | Run script | Script to estimate models with neural network and do forecasting. |
-| 03_GARCH_Estimation.py | Run script | Script to estimate and simulate GARCH as benchmark for distribution forecasts. |
-| 04_DistributionMoments.py | Run script | Script to derive distribution moments from quantile forecasts. |
-| 05_Analytics.py | Run script | Main script to produce the tables. |
-| 06_RobustnessGBRT_RF.py | Run script | Robustness tests with tree-based methods. |
-| 06_RobustnessSimulation.py | Run script | Robustness tests with simulations. |
-| ChampionModel.ipynb | Notebook | Minimum working example creating data and running the champion model using WRDS data in the US. |
-
 
 ---
 
@@ -155,12 +151,10 @@ Individual input files are as follows.
 | DataStream / Manual | ExchangeMapping.xlsx | Mapping of exchanges and regions for international sample. | Full file |
 | Manual | Exclude_DSCD.csv | List of DSCD that are filtered out based on manual investigation. | Full file |
 
-Full input files that are not part of the replication package can be obtained from:
+Full input files that are not part of the replication package. They can be obtained from data vendors:
 
-- **WRDS:** CRSP, Compustat, and IBES historical data needs to be downloaded from WRDS which is the standard source of data for equity studies in academia. The original version of the paper (and table in the main text) was written using old format of WRDS tables covering 1926-2018 which is no longer available. The current code was adjusted to consume updated version of WRDS tables covering 1926-2023.
-- **Datastream:** Worldscope and Datastream market data is frequently used as a source of international equities data in academic studies. It is available from LSEG via API / excel pluggin / terminal. The data covering 1980-2018 was downloaded in 2019 with a commercial licence.
-
-List of variables can be obtained in the individual header files in Data/Inputs/. directory.
+- **WRDS:** CRSP, Compustat, and IBES historical data needs to be downloaded from WRDS which is the standard source of data for equity studies in academia and is generally available in business schools. The original version of the paper (and table in the main text) was written using old format of WRDS tables covering 1926-2018 which is no longer available. The current code was adjusted to consume updated version of WRDS tables covering 1926-2023. List of required variables for each file can be obtained in the individual header files in Data/Inputs/. directory.
+- **DataStream:** Worldscope fundamental data and DataStream market data is frequently used as a source of international equities data in academic studies and is generally available in business schools. The dataset can be purchased from `LSEG`. Data download is available via API / excel plugin / terminal. The data covering 1980-2018 was downloaded in 2019 with a commercial licence using excel plugin. List of variables in the individual tables can be obtained in the individual header files in Data/Inputs/. directory. The names of the variables correspond to DataStream code used to download them.
 
 ### Intermediary data files
 
